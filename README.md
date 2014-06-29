@@ -4,6 +4,8 @@
 
 ![Bus.IO](https://raw.github.com/turbonetix/bus.io/master/logo.png)
 
+(WIP) Alpha!!!
+
 The client interface for bus.io.
 
 # Installation and Environment Setup
