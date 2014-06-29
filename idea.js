@@ -2,6 +2,10 @@ var slice = Array.prototype.slice;
 var emit = require('component-emitter').prototype.emit;
 var debug = require('debug')('idea');
 var bus = require('bus.io')(3000);
+bus.in(function (msg, sock) {
+  debug('in %s', msg.action());
+  msg.deliver();
+});
 bus.out(function (msg, sock) {
   debug('out %s', msg.action());
   msg.consume();
@@ -42,7 +46,7 @@ setTimeout(function () {
   sock.message = function () {
     var self = this;
     var builder = Common.Builder();
-    builder.on('publish', function (msg) {
+    builder.on('built', function (msg) {
       debug('publish a msg', msg);
       self.emit(msg.data.action, msg); 
     });
@@ -60,7 +64,6 @@ setTimeout(function () {
     if (this.connected) {
       trigger.apply(this, args);
     } else {
-      debug('rceiveBuffer???');
       this.receiveBuffer.push(args);
     }
   }
@@ -68,7 +71,7 @@ setTimeout(function () {
     sock.emit('echo', new Date);
   });
   sock.on('echo', function (msg) {
-    console.log('msg', msg);
+    console.log('got echo');
     sock.message().action('hi').deliver();
   });
   sock.on('hi', function (msg) {
