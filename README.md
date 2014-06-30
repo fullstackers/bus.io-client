@@ -6,7 +6,28 @@
 
 (WIP) Alpha!!!
 
-The client interface for bus.io.
+The client interface for bus.io. Built on top of [socket.io-client](https://npmjs.org/package/socket.io-client "socket.io-client").
+
+`npm install bus.io-client`
+
+```javascript
+var sock = require('bus.io-client')('ws://localhost:3000');
+sock.on('connect', function () {
+  sock.message()
+    .action('say')
+    .content('hello')
+    .deliver();
+});
+sock.on('say', function (msg) {
+  console.log(msg.content());
+});
+```
+
+# Features
+
+* Exposes underlying [socket.io-client](https://npmjs.org/package/socket.io-client "socket.io-client") interface.
+* Sends and Receives `Message` objects.
+* Runs in the browser too.
 
 # Installation and Environment Setup
 
@@ -36,5 +57,3 @@ Tests are run using grunt.  You must first globally install the grunt-cli with n
 To run the tests, just run grunt
 
     > grunt spec
-
-## TODO
