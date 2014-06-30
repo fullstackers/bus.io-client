@@ -1,6 +1,6 @@
 {
   "name": "bus.io-client",
-  "version": "0.0.0-alpha3",
+  "version": "0.0.0-alpha4",
   "description": "The client interface to bus.io",
   "main": "index.js",
   "scripts": {
