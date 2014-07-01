@@ -1,3 +1,1 @@
-(function (window) {
-    window.io = require('./lib');
-})(module ? module.exports : window);
+global.window.io = require('./lib');
