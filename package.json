@@ -1,11 +1,11 @@
 {
   "name": "bus.io-client",
-  "version": "0.0.0-alpha8",
+  "version": "0.0.0-alpha9",
   "description": "The client interface to bus.io",
   "main": "index.js",
   "scripts": {
     "test": "grunt",
-    "install": "npm install browserify -g; browserify index.js -o bus.io.js"
+    "install": "npm install browserify -g; browserify index.js --standalone bus.io > bus.io.js"
   },
   "repository": {
     "type": "git",
