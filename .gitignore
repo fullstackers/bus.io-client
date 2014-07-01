@@ -2,4 +2,4 @@
 *.swo
 *.swp
 *.log
-bus.io-client.js
+bus.io.js
