@@ -4,8 +4,6 @@
 
 ![Bus.IO](https://raw.github.com/turbonetix/bus.io/master/logo.png)
 
-(WIP) Alpha!!!
-
 The client interface for bus.io. Built on top of [socket.io-client](https://npmjs.org/package/socket.io-client "socket.io-client").
 
 `npm install bus.io-client`
