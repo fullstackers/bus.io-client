@@ -1,1 +1,1 @@
-module.exports = require('./lib');
+var io = module.exports = require('./lib');
