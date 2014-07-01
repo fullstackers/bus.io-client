@@ -27,7 +27,7 @@
     "grunt-jasmine-bundle": "^0.2.0",
     "grunt-cli": "^0.1.13",
     "grunt": "^0.4.5",
-    "bus.io": "^0.2.1"
+    "bus.io": "git+https://github.com/turbonetix/bus.io.git"
   },
   "dependencies": {
     "bus.io-common": "^0.1.0",
