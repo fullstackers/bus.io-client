@@ -1,1 +1,1 @@
-global.window.io = require('./lib');
+global.window.io = module.exports = require('./lib');

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "grunt",
-    "install": "node_modules/browserify/bin/cmd.js client.js --standalone client > bus.io.js"
+    "install": "./node_modules/browserify/bin/cmd.js client.js --standalone client > bus.io.js"
   },
   "repository": {
     "type": "git",
