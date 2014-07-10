@@ -1,6 +1,6 @@
 {
   "name": "bus.io-client",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "The client interface to bus.io",
   "main": "index.js",
   "scripts": {
@@ -27,7 +27,7 @@
     "grunt-jasmine-bundle": "^0.2.0",
     "grunt-cli": "^0.1.13",
     "grunt": "^0.4.5",
-    "bus.io": "^0.3"
+    "bus.io": "^0.4"
   },
   "dependencies": {
     "bus.io-common": "^0.1.0",
