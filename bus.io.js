@@ -40,7 +40,7 @@ var client = module.exports = function (uri, opts) {
       this.receiveBuffer.push(args);
     }
   };
-  sock.message = function (data) {
+  sock.msg = sock.message = function (data) {
     var self = this;
     var builder = common.Builder(data);
     builder.on('built', function (msg) {
@@ -48,6 +48,9 @@ var client = module.exports = function (uri, opts) {
       self.emit(msg.data.action, msg); 
     });
     return builder;
+  };
+  sock.deliver = function (data) {
+    this.message(data).deliver();
   };
   return sock;
 };
@@ -94,8 +97,9 @@ module.exports = _dereq_('./lib');
 },{"./lib":6}],4:[function(_dereq_,module,exports){
 var util = _dereq_('util')
   , events = _dereq_('events')
-  , debug = _dereq_('debug')('builder')
+  , debug = _dereq_('debug')('bus.io-common:builder')
   , Message = _dereq_('./message')
+  , slice = Array.prototype.slice
   ;
 
 module.exports = Builder;
@@ -126,8 +130,9 @@ util.inherits(Builder, events.EventEmitter);
 
 'actor action target content id created reference published'.split(' ').forEach(function (name) {
   Builder.prototype[name] = function () {
-    var v = this.message[name].apply(this.message,Array.prototype.slice.call(arguments));
-    if (v === this.message) {
+    debug('delegating %s to the message instance', name);
+    var v = this.message[name].apply(this.message,slice.call(arguments));
+    if ('object' === typeof v && (v === this.message || v.isMessage)) {
       return this;
     }
     else {
@@ -199,7 +204,7 @@ Builder.prototype.to = Builder.prototype.deliver = function () {
   }
 
   if (arguments.length > 1) {
-    var targets = Array.prototype.slice.call(arguments);
+    var targets = slice.call(arguments);
     for (var i=1; i<targets.length; i++) {
       var message = this.message.clone();
       message.target(String(targets[i]));
@@ -214,8 +219,9 @@ Builder.prototype.to = Builder.prototype.deliver = function () {
 },{"./message":7,"debug":11,"events":30,"util":34}],5:[function(_dereq_,module,exports){
 var util = _dereq_('util')
   , events = _dereq_('events')
-  , debug = _dereq_('debug')('controller')
+  , debug = _dereq_('debug')('bus.io-common:controller')
   , Message = _dereq_('./message')
+  , slice = Array.prototype.slice
   ;
 
 module.exports = Controller;
@@ -307,10 +313,28 @@ Controller.prototype.deliver = function () {
   }
   else if (arguments.length > 1) {
     debug('we have more than one arguments so deliver to each of them');
-    deliverEach(this, Array.prototype.slice.call(arguments));
+    deliverEach(this, slice.call(arguments));
   }
   return this;
 };
+
+
+/**
+ * This method is a conveince for setting the content and as well as triggering
+ * the response, if we encounter an error.
+ *
+ * @param {mixed} content
+ * @return Controller
+ */
+
+Controller.prototype.errored = function (err) {
+  debug('responding with an error');
+  this.action(this.action() + ' errored').respond(err); 
+  return this;
+};
+
+
+
 
 /**
  * set up delegates
@@ -318,8 +342,9 @@ Controller.prototype.deliver = function () {
 
 'actor action target content id created reference published'.split(' ').forEach(function (name) {
   Controller.prototype[name] = function () {
-    var v = this.message[name].apply(this.message,Array.prototype.slice.call(arguments));
-    if (v === this.message) {
+    debug('delegating %s to the message instance', name);
+    var v = this.message[name].apply(this.message,slice.call(arguments));
+    if ('object' === typeof v && (v === this.message || v.isMessage)) {
       return this;
     }
     else {
@@ -343,8 +368,9 @@ exports.Builder = _dereq_('./builder');
 
 },{"./builder":4,"./controller":5,"./message":7}],7:[function(_dereq_,module,exports){
 var extend = _dereq_('extend')
-  , debug = _dereq_('debug')('message')
+  , debug = _dereq_('debug')('bus.io-common:message')
   , uuid = _dereq_('node-uuid')
+  , slice = Array.prototype.slice
   ;
 
 module.exports = Message;
@@ -363,7 +389,7 @@ function Message () {
     else {
       debug('creating new message and initializing with arguments');
       var m = new Message();
-      Message.prototype.initialize.apply(m, Array.prototype.slice.call(arguments));
+      Message.prototype.initialize.apply(m, slice.call(arguments));
       return m;
     }
   }
@@ -371,7 +397,7 @@ function Message () {
     this.isMessage = true;
     if (arguments.length) {
       debug('initializing with arguments');
-      Message.prototype.initialize.apply(this, Array.prototype.slice.call(arguments));
+      Message.prototype.initialize.apply(this, slice.call(arguments));
     }
   }
 
@@ -1029,9 +1055,9 @@ exports.colors = [
 ];
 
 /**
- * Currently only WebKit-based Web Inspectors and the Firebug
- * extension (*not* the built-in Firefox web inpector) are
- * known to support "%c" CSS customizations.
+ * Currently only WebKit-based Web Inspectors, Firefox >= v31,
+ * and the Firebug extension (any Firefox version) are known
+ * to support "%c" CSS customizations.
  *
  * TODO: add a `localStorage` variable to explicitly enable/disable colors
  */
@@ -1040,7 +1066,10 @@ function useColors() {
   // is webkit? http://stackoverflow.com/a/16459606/376773
   return ('WebkitAppearance' in document.documentElement.style) ||
     // is firebug? http://stackoverflow.com/a/398120/376773
-    (window.console && (console.firebug || (console.exception && console.table)));
+    (window.console && (console.firebug || (console.exception && console.table))) ||
+    // is firefox >= v31?
+    // https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
+    (navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31);
 }
 
 /**
@@ -1064,7 +1093,7 @@ function formatArgs() {
 
   args[0] = (useColors ? '%c' : '')
     + this.namespace
-    + (useColors ? '%c ' : ' ')
+    + (useColors ? ' %c' : ' ')
     + args[0]
     + (useColors ? '%c ' : ' ')
     + '+' + exports.humanize(this.diff);
@@ -1072,7 +1101,7 @@ function formatArgs() {
   if (!useColors) return args;
 
   var c = 'color: ' + this.color;
-  args = [args[0], c, ''].concat(Array.prototype.slice.call(args, 1));
+  args = [args[0], c, 'color: inherit'].concat(Array.prototype.slice.call(args, 1));
 
   // the final "%c" is somewhat tricky, because there could be other
   // arguments passed either before or after the %c, so we need to
@@ -1262,7 +1291,7 @@ function debug(namespace) {
     if ('function' === typeof exports.formatArgs) {
       args = exports.formatArgs.apply(self, args);
     }
-    var logFn = exports.log || enabled.log || console.log.bind(console);
+    var logFn = enabled.log || exports.log || console.log.bind(console);
     logFn.apply(self, args);
   }
   enabled.enabled = true;
@@ -1475,22 +1504,35 @@ exports.INSPECT_MAX_BYTES = 50
 Buffer.poolSize = 8192
 
 /**
- * If `Buffer._useTypedArrays`:
+ * If `TYPED_ARRAY_SUPPORT`:
  *   === true    Use Uint8Array implementation (fastest)
- *   === false   Use Object implementation (compatible down to IE6)
+ *   === false   Use Object implementation (most compatible, even IE6)
+ *
+ * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
+ * Opera 11.6+, iOS 4.2+.
+ *
+ * Note:
+ *
+ * - Implementation must support adding new properties to `Uint8Array` instances.
+ *   Firefox 4-29 lacked support, fixed in Firefox 30+.
+ *   See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438.
+ *
+ *  - Chrome 9-10 is missing the `TypedArray.prototype.subarray` function.
+ *
+ *  - IE10 has a broken `TypedArray.prototype.subarray` function which returns arrays of
+ *    incorrect length in some situations.
+ *
+ * We detect these buggy browsers and set `TYPED_ARRAY_SUPPORT` to `false` so they will
+ * get the Object implementation, which is slower but will work correctly.
  */
-Buffer._useTypedArrays = (function () {
-  // Detect if browser supports Typed Arrays. Supported browsers are IE 10+, Firefox 4+,
-  // Chrome 7+, Safari 5.1+, Opera 11.6+, iOS 4.2+. If the browser does not support adding
-  // properties to `Uint8Array` instances, then that's the same as no `Uint8Array` support
-  // because we need to be able to add all the node Buffer API methods. This is an issue
-  // in Firefox 4-29. Now fixed: https://bugzilla.mozilla.org/show_bug.cgi?id=695438
+var TYPED_ARRAY_SUPPORT = (function () {
   try {
     var buf = new ArrayBuffer(0)
     var arr = new Uint8Array(buf)
     arr.foo = function () { return 42 }
-    return 42 === arr.foo() &&
-        typeof arr.subarray === 'function' // Chrome 9-10 lack `subarray`
+    return 42 === arr.foo() && // typed array instances can be augmented
+        typeof arr.subarray === 'function' && // chrome 9-10 lack `subarray`
+        new Uint8Array(1).subarray(1, 1).byteLength === 0 // ie10 has broken `subarray`
   } catch (e) {
     return false
   }
@@ -1514,23 +1556,23 @@ function Buffer (subject, encoding, noZero) {
 
   var type = typeof subject
 
-  if (encoding === 'base64' && type === 'string') {
-    subject = base64clean(subject)
-  }
-
   // Find the length
   var length
   if (type === 'number')
-    length = coerce(subject)
-  else if (type === 'string')
+    length = subject > 0 ? subject >>> 0 : 0
+  else if (type === 'string') {
+    if (encoding === 'base64')
+      subject = base64clean(subject)
     length = Buffer.byteLength(subject, encoding)
-  else if (type === 'object')
-    length = coerce(subject.length) // assume that object is array-like
-  else
+  } else if (type === 'object' && subject !== null) { // assume object is array-like
+    if (subject.type === 'Buffer' && isArray(subject.data))
+      subject = subject.data
+    length = +subject.length > 0 ? Math.floor(+subject.length) : 0
+  } else
     throw new Error('First argument needs to be a number, array or string.')
 
   var buf
-  if (Buffer._useTypedArrays) {
+  if (TYPED_ARRAY_SUPPORT) {
     // Preferred: Return an augmented `Uint8Array` instance for best performance
     buf = Buffer._augment(new Uint8Array(length))
   } else {
@@ -1541,7 +1583,7 @@ function Buffer (subject, encoding, noZero) {
   }
 
   var i
-  if (Buffer._useTypedArrays && typeof subject.byteLength === 'number') {
+  if (TYPED_ARRAY_SUPPORT && typeof subject.byteLength === 'number') {
     // Speed optimization -- use set if we're copying from a typed array
     buf._set(subject)
   } else if (isArrayish(subject)) {
@@ -1555,7 +1597,7 @@ function Buffer (subject, encoding, noZero) {
     }
   } else if (type === 'string') {
     buf.write(subject, 0, encoding)
-  } else if (type === 'number' && !Buffer._useTypedArrays && !noZero) {
+  } else if (type === 'number' && !TYPED_ARRAY_SUPPORT && !noZero) {
     for (i = 0; i < length; i++) {
       buf[i] = 0
     }
@@ -1587,7 +1629,7 @@ Buffer.isEncoding = function (encoding) {
 }
 
 Buffer.isBuffer = function (b) {
-  return !!(b !== null && b !== undefined && b._isBuffer)
+  return !!(b != null && b._isBuffer)
 }
 
 Buffer.byteLength = function (str, encoding) {
@@ -1862,7 +1904,7 @@ Buffer.prototype.copy = function (target, target_start, start, end) {
 
   var len = end - start
 
-  if (len < 100 || !Buffer._useTypedArrays) {
+  if (len < 100 || !TYPED_ARRAY_SUPPORT) {
     for (var i = 0; i < len; i++) {
       target[i + target_start] = this[i + start]
     }
@@ -1934,10 +1976,29 @@ function utf16leSlice (buf, start, end) {
 
 Buffer.prototype.slice = function (start, end) {
   var len = this.length
-  start = clamp(start, len, 0)
-  end = clamp(end, len, len)
+  start = ~~start
+  end = end === undefined ? len : ~~end
 
-  if (Buffer._useTypedArrays) {
+  if (start < 0) {
+    start += len;
+    if (start < 0)
+      start = 0
+  } else if (start > len) {
+    start = len
+  }
+
+  if (end < 0) {
+    end += len
+    if (end < 0)
+      end = 0
+  } else if (end > len) {
+    end = len
+  }
+
+  if (end < start)
+    end = start
+
+  if (TYPED_ARRAY_SUPPORT) {
     return Buffer._augment(this.subarray(start, end))
   } else {
     var sliceLen = end - start
@@ -2396,7 +2457,7 @@ Buffer.prototype.inspect = function () {
  */
 Buffer.prototype.toArrayBuffer = function () {
   if (typeof Uint8Array !== 'undefined') {
-    if (Buffer._useTypedArrays) {
+    if (TYPED_ARRAY_SUPPORT) {
       return (new Buffer(this)).buffer
     } else {
       var buf = new Uint8Array(this.length)
@@ -2487,25 +2548,6 @@ function base64clean (str) {
 function stringtrim (str) {
   if (str.trim) return str.trim()
   return str.replace(/^\s+|\s+$/g, '')
-}
-
-// slice(start, end)
-function clamp (index, len, defaultValue) {
-  if (typeof index !== 'number') return defaultValue
-  index = ~~index;  // Coerce to integer.
-  if (index >= len) return len
-  if (index >= 0) return index
-  index += len
-  if (index >= 0) return index
-  return 0
-}
-
-function coerce (length) {
-  // Coerce length to a number (possibly NaN), round up
-  // in case it's fractional (e.g. 123.456) then do a
-  // double negate to coerce a NaN to 0. Easy, right?
-  length = ~~Math.ceil(+length)
-  return length < 0 ? 0 : length
 }
 
 function isArray (subject) {
