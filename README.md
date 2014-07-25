@@ -11,10 +11,15 @@ The client interface for bus.io. Built on top of [socket.io-client](https://npmj
 ```javascript
 var sock = require('bus.io-client')('ws://localhost:3000');
 sock.on('connect', function () {
-  sock.message()
-    .action('say')
-    .content('hello')
-    .deliver();
+  sock.deliver({
+    action:'say',
+    content:'Hello'
+  });
+  sock.msg({
+    action:'say',
+    content:'Hello'
+  }).deliver();
+  sock.emit('say', 'Hello');
 });
 sock.on('say', function (msg) {
   console.log(msg.content());
