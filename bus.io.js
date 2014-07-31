@@ -277,7 +277,7 @@ Controller.prototype.respond = function (content) {
   debug('response message id %', message.id());
   message.data.actor = this.message.target();
   message.data.target = this.message.actor();
-  message.data.content = content;
+  message.data.content = typeof content !== 'undefined' ? content : message.data.content;
   message.data.created = new Date();
   message.data.reference = this.message.id();
 
